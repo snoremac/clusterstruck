@@ -52,7 +52,7 @@ module Clusterstruck
 
       config_hash = {
         :name => @name,
-        :ami_version => @ami_version || 'latest',
+        :ami_version => @ami_version.to_s || 'latest',
         :log_uri => get_log_uri,
         :instances => {
           :ec2_key_name => @ec2_key_name,
@@ -142,7 +142,7 @@ module Clusterstruck
       }
 
       if @bid_price
-        config_hash[:bid_price] = @bid_price
+        config_hash[:bid_price] = @bid_price.to_s
       end
 
       config_hash

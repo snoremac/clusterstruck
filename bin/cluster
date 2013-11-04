@@ -7,13 +7,13 @@ require 'getoptlong'
 require 'clusterstruck'
 
 
-# cluster hadoop launch test
-# cluster hadoop job j-g439839789 job-a
+# cluster launch test
+# cluster job j-g439839789 job-a
 
 USAGE = """
 Usage:\tcluster [ -f CONFIG_FILE ] launch NAME [ STEP ... ]
 \tcluster [ -f CONFIG_FILE ] job JOB_FLOW_ID JOB [ JOB ... ]
-\tcluster terminate JOB_FLOW_ID
+\tcluster kill JOB_FLOW_ID
 """
 
 DEFAULT_CONFIG_FILE = File.join(Dir.pwd, 'config/clusterstruck.rb')
@@ -49,12 +49,17 @@ if not config_file
 	end
 end
 
-if ARGV.length < 2 || !['launch', 'step', 'terminate'].member?(ARGV[0])
+if ARGV.length < 2 || !['launch', 'job', 'kill'].member?(ARGV[0])
   $stderr.puts USAGE
   exit 1
 end
 
 command = ARGV.shift
-Clusterstruck.method(command).call(config_file, *ARGV)
+
+begin
+  Clusterstruck.method(command).call(config_file, *ARGV)
+rescue => e
+  $stderr.puts e.message
+end
 
 

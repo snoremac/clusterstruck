@@ -22,15 +22,29 @@ module Clusterstruck
 
     emr = AWS::EMR.new(:region => AWS_REGION)
     config_hash = @config.launch_config(config_name).to_hash
-    puts config_hash
-    #response = emr.client.run_job_flow(config_hash)
-    #puts "Job flow ID: #{response[:job_flow_id]}"
+    
+    response = emr.client.run_job_flow(config_hash)
+    puts "Created cluster with job flow ID: #{response[:job_flow_id]}"
+
+    response[:job_flow_id] 
   end
 
   def self.job(config_file, *args)
   end
 
-  def self.terminate(config_file, *args)
+  def self.kill(config_file, *args)
+    name = args[0]
+    emr = AWS::EMR.new(:region => AWS_REGION)
+
+    job_flow = emr.job_flows.find do |job_flow|
+      job_flow.name == name
+    end
+    if not job_flow
+      raise ArgumentError.new("No running cluster with name #{name}")
+    end
+
+    emr.client.terminate_job_flows(:job_flow_ids => [job_flow.id])
+    puts "Terminated cluster with job flow ID: #{job_flow.id}"
   end
 
   class Config
