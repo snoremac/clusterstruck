@@ -37,11 +37,16 @@ describe 'HadoopClusterConfig' do
 	    :ami_version => 'latest',
 	    :log_uri => nil,
 	    :instances => {
-	      :master_instance_type => 'm1.small',
-	      :slave_instance_type => 'm1.small',
-	      :instance_count => 2,
 	      :ec2_key_name => 'a_key_pair',
-	      :keep_job_flow_alive_when_no_steps => false
+	      :keep_job_flow_alive_when_no_steps => false,
+	      :instance_groups => [
+	      	{
+	      		:instance_role => 'MASTER',
+	      		:instance_type => 'm1.large',
+	      		:instance_count => 1,
+	      		:market => 'ON_DEMAND'
+	      	}
+	      ]
 	    },
 	    :bootstrap_actions => [],
 	    :steps => []
@@ -89,20 +94,76 @@ describe 'HadoopClusterConfig' do
 		config_hash = to_hash {
 			name 'test'
 			ec2_key_name 'a_key_pair'
-			master_instance_type "m1.large"
-			slave_instance_type "m3.2xlarge"
+			master_instance_group {
+				type "m1.large"
+			}
+			core_instance_group {
+				type "m3.2xlarge"
+			}
 		}
-		config_hash[:instances][:master_instance_type].must_equal "m1.large"
-		config_hash[:instances][:slave_instance_type].must_equal "m3.2xlarge"
+
+		group = config_hash[:instances][:instance_groups].detect do |group|
+			true if group[:instance_role] == 'MASTER' and group[:instance_type] == 'm1.large'
+		end
+		group.wont_be_nil
+
+		group = config_hash[:instances][:instance_groups].detect do |group|
+			true if group[:instance_role] == 'CORE' and group[:instance_type] == 'm3.2xlarge'
+		end
+		group.wont_be_nil
   end  
 
-  it "should set number of instances" do
+  it "should set instance count for the core group" do
 		config_hash = to_hash {
 			name 'test'
 			ec2_key_name 'a_key_pair'
-			instance_count 2
+			core_instance_group {
+				count 4
+			}
 		}
-		config_hash[:instances][:instance_count].must_equal 2
+
+		group = config_hash[:instances][:instance_groups].detect do |group|
+			true if group[:instance_role] == 'CORE' and group[:instance_count] == 4
+		end
+		group.wont_be_nil
+  end  
+
+  it "should ignore count for the master group" do
+		config_hash = to_hash {
+			name 'test'
+			ec2_key_name 'a_key_pair'
+			master_instance_group {
+				count 4
+			}
+		}
+
+		group = config_hash[:instances][:instance_groups].detect do |group|
+			true if group[:instance_role] == 'MASTER' and group[:instance_count] == 1
+		end
+		group.wont_be_nil
+  end
+
+  it "should set the spot market bid price" do
+		config_hash = to_hash {
+			name 'test'
+			ec2_key_name 'a_key_pair'
+			master_instance_group {
+				bid_price 0.20
+			}
+			core_instance_group {
+				bid_price 0.50
+			}
+		}
+
+		group = config_hash[:instances][:instance_groups].detect do |group|
+			true if group[:instance_role] == 'MASTER' and group[:market] == 'SPOT' and group[:bid_price] == 0.20
+		end
+		group.wont_be_nil
+
+		group = config_hash[:instances][:instance_groups].detect do |group|
+			true if group[:instance_role] == 'CORE' and group[:market] == 'SPOT' and group[:bid_price] == 0.50
+		end
+		group.wont_be_nil
   end
 
   it "should set the EC2 key pair name" do
@@ -150,5 +211,7 @@ describe 'HadoopClusterConfig' do
 	        }			
 		})
   end
+
+
 
 end

@@ -9,17 +9,30 @@ module Clusterstruck
       ami_version
       bucket
       ec2_key_name
-      instance_count
       keep_alive
       log_uri
-      master_instance_type
       name
-      slave_instance_type
     }
 
+    def initialize
+      @bootstrap_paths = []
+      @instance_groups = { 
+        :master => InstanceGroup.new(:master)
+      }
+    end
+
     def bootstrap(path)
-      @bootstrap_paths ||= []
       @bootstrap_paths.push path
+    end
+
+    def master_instance_group(&config_block)
+      @instance_groups[:master] ||= InstanceGroup.new(:master)
+      @instance_groups[:master].instance_eval(&config_block)
+    end
+
+    def core_instance_group(&config_block)
+      @instance_groups[:core] ||= InstanceGroup.new(:core)
+      @instance_groups[:core].instance_eval(&config_block)
     end
 
     def method_missing(method, *args, &block)
@@ -42,11 +55,9 @@ module Clusterstruck
         :ami_version => @ami_version || 'latest',
         :log_uri => get_log_uri,
         :instances => {
-          :master_instance_type => @master_instance_type || 'm1.small',
-          :slave_instance_type => @slave_instance_type || 'm1.small',
-          :instance_count => @instance_count || 2,
           :ec2_key_name => @ec2_key_name,
-          :keep_job_flow_alive_when_no_steps => @keep_alive || false
+          :keep_job_flow_alive_when_no_steps => @keep_alive || false,
+          :instance_groups => @instance_groups.map { |role, group| group.to_hash }
         },
         :bootstrap_actions => get_bootstrap_actions,
         :steps => []
@@ -71,8 +82,6 @@ module Clusterstruck
     end
 
     def get_bootstrap_actions
-      return [] unless @bootstrap_paths
-
       @bootstrap_paths.map do |path|
         name = ''
         if (path.rindex('/'))
@@ -91,6 +100,57 @@ module Clusterstruck
         { :name => name, :script_bootstrap_action => { :path => qualified_path } }
       end
 
+    end
+
+  end
+
+  class InstanceGroup
+
+    PROPERTIES = %w{
+      type
+      role
+      count
+      bid_price
+    }    
+
+    def initialize(role, type = 'm1.large', count = 1)
+      @role = role
+      @type = type
+      @count = count
+    end
+
+    def method_missing(method, *args, &block)
+      if PROPERTIES.member?(method.to_s)
+        if args.count == 0
+          instance_variable_get("@#{method}")
+        else
+          instance_variable_set("@#{method}", *args[0])
+        end
+      else
+        super
+      end
+    end
+
+    def to_hash
+      validate
+
+      config_hash = {
+        :instance_role => @role.to_s.upcase,
+        :instance_type => @type,
+        :instance_count => @role == :master ? 1 : @count,
+        :market => @bid_price ? 'SPOT' : 'ON_DEMAND',
+      }
+
+      if @bid_price
+        config_hash[:bid_price] = @bid_price
+      end
+
+      config_hash
+    end
+
+    private
+
+    def validate
     end
 
   end

@@ -44,7 +44,7 @@ module Clusterstruck
     end
 
     def hadoop(&config_block)
-      hadoop_config = HadoopClusterConfig.new()
+      hadoop_config = HadoopClusterConfig.new
       hadoop_config.instance_eval(&config_block)
       @launch_configs[hadoop_config.name] = hadoop_config
     end
