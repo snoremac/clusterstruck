@@ -1,0 +1,60 @@
+#!/usr/bin/env ruby
+
+$: << File.expand_path("../../lib", __FILE__)
+
+require 'rubygems'
+require 'getoptlong'
+require 'clusterstruck'
+
+
+# cluster hadoop launch test
+# cluster hadoop job j-g439839789 job-a
+
+USAGE = """
+Usage:\tcluster [ -f CONFIG_FILE ] launch NAME [ STEP ... ]
+\tcluster [ -f CONFIG_FILE ] job JOB_FLOW_ID JOB [ JOB ... ]
+\tcluster terminate JOB_FLOW_ID
+"""
+
+DEFAULT_CONFIG_FILE = File.join(Dir.pwd, 'config/clusterstruck.rb')
+
+opts = GetoptLong.new(
+  [ "--help",	"-h", GetoptLong::NO_ARGUMENT ],
+  [ "--config-file",	"-f", GetoptLong::REQUIRED_ARGUMENT ]
+)
+
+config_file = nil
+
+begin
+  opts.each do |opt, arg|
+    case opt
+      when "--help"
+        puts USAGE
+        exit 0
+      when "--config-file"
+        config_file = arg
+    end
+  end
+rescue GetoptLong::Error => e
+  $stderr.puts USAGE
+  exit 1
+end
+
+if not config_file
+	if File.exists?(DEFAULT_CONFIG_FILE)
+		config_file = DEFAULT_CONFIG_FILE
+	else
+  	$stderr.puts "Can't find config/clusterstruck.rb and no other config file specified."
+  	exit 1
+	end
+end
+
+if ARGV.length < 2 || !['launch', 'step', 'terminate'].member?(ARGV[0])
+  $stderr.puts USAGE
+  exit 1
+end
+
+command = ARGV.shift
+Clusterstruck.method(command).call(config_file, *ARGV)
+
+
