@@ -1,7 +1,9 @@
 require 'aws-sdk'
 
 require "clusterstruck/version"
-require "clusterstruck/cluster_config"
+require "clusterstruck/config"
+require "clusterstruck/cluster"
+require "clusterstruck/job"
 
 module Clusterstruck
 
@@ -33,11 +35,14 @@ module Clusterstruck
   end
 
   def self.kill(config_file, *args)
+    @config = Config.new
+    @config.instance_eval(IO.read(config_file), config_file)
+
     name = args[0]
     emr = AWS::EMR.new(:region => AWS_REGION)
 
     job_flow = emr.job_flows.find do |job_flow|
-      job_flow.name == name
+      job_flow.name == name and ['RUNNING', 'WAITING'].member? job_flow.state
     end
     if not job_flow
       raise ArgumentError.new("No running cluster with name #{name}")
@@ -45,43 +50,6 @@ module Clusterstruck
 
     emr.client.terminate_job_flows(:job_flow_ids => [job_flow.id])
     puts "Terminated cluster with job flow ID: #{job_flow.id}"
-  end
-
-  class Config
-
-    attr_reader :launch_configs
-    attr_reader :job_configs
-
-    def initialize
-      @launch_configs = {}
-      @job_configs = {}
-    end
-
-    def hadoop(&config_block)
-      hadoop_config = HadoopClusterConfig.new
-      hadoop_config.instance_eval(&config_block)
-      @launch_configs[hadoop_config.name] = hadoop_config
-    end
-
-    def has_launch_config(name)
-      launch_configs.member? name
-    end
-
-    def has_job_config(name)
-      job_configs.member? name
-    end
-
-    def launch_config(name)
-      launch_configs[name]
-    end
-
-    def job_config(name)
-      job_configs[name]
-    end
-
-  end
-  
-  class ValidationException < Exception
   end
 
 end

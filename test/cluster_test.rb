@@ -1,9 +1,9 @@
 require 'test_helper'
 
-describe 'HadoopClusterConfig' do
+describe 'HadoopCluster' do
 
 	def to_hash(&block)
-		config = Clusterstruck::HadoopClusterConfig.new
+		config = Clusterstruck::HadoopCluster.new
 		config.instance_eval(&block)
 		config.to_hash
 	end
@@ -156,12 +156,12 @@ describe 'HadoopClusterConfig' do
 		}
 
 		group = config_hash[:instances][:instance_groups].detect do |group|
-			true if group[:instance_role] == 'MASTER' and group[:market] == 'SPOT' and group[:bid_price] == 0.20
+			true if group[:instance_role] == 'MASTER' and group[:market] == 'SPOT' and group[:bid_price].to_f == 0.20
 		end
 		group.wont_be_nil
 
 		group = config_hash[:instances][:instance_groups].detect do |group|
-			true if group[:instance_role] == 'CORE' and group[:market] == 'SPOT' and group[:bid_price] == 0.50
+			true if group[:instance_role] == 'CORE' and group[:market] == 'SPOT' and group[:bid_price].to_f == 0.50
 		end
 		group.wont_be_nil
   end

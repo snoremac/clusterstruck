@@ -1,23 +1,28 @@
 module Clusterstruck
 
-
-	class HadoopClusterConfig
+	class HadoopCluster
 
     S3_URI_PATTERN = /s3:\/\//
 
-    PROPERTIES = %w{ 
-      ami_version
-      bucket
-      ec2_key_name
-      keep_alive
-      log_uri
-      name
-    }
+    include Clusterstruck::Configurable
 
     def initialize
       @bootstrap_paths = []
       @instance_groups = { 
         :master => InstanceGroup.new(:master)
+      }
+      @ami_version = :latest
+      @keep_alive = false
+    end
+
+    def properties
+      %w{ 
+        ami_version
+        bucket
+        ec2_key_name
+        keep_alive
+        log_uri
+        name
       }
     end
 
@@ -35,28 +40,16 @@ module Clusterstruck
       @instance_groups[:core].instance_eval(&config_block)
     end
 
-    def method_missing(method, *args, &block)
-      if PROPERTIES.member?(method.to_s)
-        if args.count == 0
-          instance_variable_get("@#{method}")
-        else
-          instance_variable_set("@#{method}", *args[0])
-        end
-      else
-        super
-      end
-    end
-
     def to_hash
       validate
 
       config_hash = {
         :name => @name,
-        :ami_version => @ami_version.to_s || 'latest',
+        :ami_version => @ami_version.to_s,
         :log_uri => get_log_uri,
         :instances => {
           :ec2_key_name => @ec2_key_name,
-          :keep_job_flow_alive_when_no_steps => @keep_alive || false,
+          :keep_job_flow_alive_when_no_steps => @keep_alive,
           :instance_groups => @instance_groups.map { |role, group| group.to_hash }
         },
         :bootstrap_actions => get_bootstrap_actions,
@@ -106,12 +99,7 @@ module Clusterstruck
 
   class InstanceGroup
 
-    PROPERTIES = %w{
-      type
-      role
-      count
-      bid_price
-    }    
+    include Clusterstruck::Configurable
 
     def initialize(role, type = 'm1.large', count = 1)
       @role = role
@@ -119,16 +107,13 @@ module Clusterstruck
       @count = count
     end
 
-    def method_missing(method, *args, &block)
-      if PROPERTIES.member?(method.to_s)
-        if args.count == 0
-          instance_variable_get("@#{method}")
-        else
-          instance_variable_set("@#{method}", *args[0])
-        end
-      else
-        super
-      end
+    def properties
+      %w{
+        type
+        role
+        count
+        bid_price
+      }
     end
 
     def to_hash
