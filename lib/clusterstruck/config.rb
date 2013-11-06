@@ -18,11 +18,11 @@ module Clusterstruck
 
   class Config
 
-    attr_reader :launch_configs
+    attr_reader :cluster_configs
     attr_reader :job_configs
 
     def initialize
-      @launch_configs = {}
+      @cluster_configs = {}
       @job_configs = {}
     end
 
@@ -37,7 +37,7 @@ module Clusterstruck
     def hadoop(&config_block)
       hadoop_config = HadoopCluster.new
       hadoop_config.instance_eval(&config_block)
-      @launch_configs[hadoop_config.name] = hadoop_config
+      @cluster_configs[hadoop_config.name] = hadoop_config
     end
 
     def s3distcp(&config_block)
@@ -46,16 +46,16 @@ module Clusterstruck
     def jar(&config_block)
     end
 
-    def has_launch_config(name)
-      launch_configs.member? name
+    def has_cluster_config?(name)
+      cluster_configs.member? name
     end
 
-    def has_job_config(name)
+    def has_job_config?(name)
       job_configs.member? name
     end
 
-    def launch_config(name)
-      launch_configs[name]
+    def cluster_config(name)
+      cluster_configs[name]
     end
 
     def job_config(name)

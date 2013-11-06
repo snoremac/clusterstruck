@@ -13,17 +13,17 @@ module Clusterstruck
 
   AWS.config(:access_key_id => AWS_ACCESS_KEY, :secret_access_key => AWS_SECRET_KEY)
 
-  def self.launch(config_file, *args)
+  def self.cluster(config_file, *args)
     @config = Config.new
     @config.instance_eval(IO.read(config_file), config_file)
 
     config_name = args[0]
-    if not @config.has_launch_config(config_name)
-      raise ArgumentError.new("No launch configuration with name #{config_name}")
+    if not @config.has_cluster_config?(config_name)
+      raise ArgumentError.new("No cluster configuration with name #{config_name}")
     end
 
     emr = AWS::EMR.new(:region => AWS_REGION)
-    config_hash = @config.launch_config(config_name).to_hash
+    config_hash = @config.cluster_config(config_name).to_hash
     
     response = emr.client.run_job_flow(config_hash)
     puts "Created cluster with job flow ID: #{response[:job_flow_id]}"
